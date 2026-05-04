@@ -55,7 +55,7 @@ const steps = [
 ];
 
 const testimonials = [
-  { name: "Amegan Japhet.", role: "Cliente fidèle", text: "Service impeccable, livraison toujours à l'heure. Je recommande vivement !" },
+  { name: "Amegan Japhet.", role: "Client fidèl", text: "Service impeccable, livraison toujours à l'heure. Je recommande vivement !" },
   { name: "Kodjo B.", role: "Restaurateur", text: "Grâce à NésorKaba, mes plats arrivent chauds chez mes clients. Partenaire de confiance." },
   { name: "Sophie L.", role: "Entrepreneure", text: "Rapides, professionnels et abordables. Indispensables pour mon activité." },
 ];
