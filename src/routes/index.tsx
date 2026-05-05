@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Package, UtensilsCrossed, Zap, FileText, ShoppingBag,
   Clock, Shield, Wallet, Calendar,
   ClipboardList, Bike, Truck, MapPin,
   Phone, Mail, MessageCircle, ArrowRight, Star, Instagram,
-  Facebook, Menu, X,
+  Facebook, Menu, X, CheckCircle2, Circle, Navigation,
 } from "lucide-react";
 import heroImage from "@/assets/hero-delivery.jpg";
 import logo from "@/assets/logo-nesorkaba.png";
@@ -66,8 +66,15 @@ const stats = [
   { value: 4.9, suffix: "★", label: "Satisfaction" },
 ];
 
-// ─── Hooks ────────────────────────────────────────────────────────────────────
+const TRACKER_STEPS = [
+  { id: 0, icon: ClipboardList, label: "Commande reçue", time: "09:14", detail: "Votre commande a été confirmée" },
+  { id: 1, icon: Bike, label: "Livreur en route", time: "09:18", detail: "Koffi se dirige vers le restaurant" },
+  { id: 2, icon: Package, label: "Colis récupéré", time: "09:27", detail: "Récupéré chez le partenaire" },
+  { id: 3, icon: Navigation, label: "En livraison", time: "09:31", detail: "Votre livreur arrive dans ~8 min" },
+  { id: 4, icon: CheckCircle2, label: "Livré ✓", time: "09:39", detail: "Livraison effectuée avec succès !" },
+];
 
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
@@ -98,16 +105,28 @@ function useCounter(target: number, duration = 1800, active = false) {
   return count;
 }
 
-// ─── TikTok SVG Icon ──────────────────────────────────────────────────────────
+function useHaptic() {
+  return useCallback((type: "light" | "medium" | "heavy" = "light") => {
+    if (!("vibrate" in navigator)) return;
+    const patterns: Record<string, number[]> = {
+      light: [10],
+      medium: [20],
+      heavy: [30, 10, 30],
+    };
+    navigator.vibrate(patterns[type]);
+  }, []);
+}
+
+// ─── TikTok Icon ──────────────────────────────────────────────────────────────
 function TikTokIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.83 1.54V6.78a4.85 4.85 0 0 1-1.06-.09z"/>
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.83 1.54V6.78a4.85 4.85 0 0 1-1.06-.09z" />
     </svg>
   );
 }
 
-// ─── Animated Counter Card ─────────────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 function StatCard({ value, suffix, label, active }: { value: number; suffix: string; label: string; active: boolean }) {
   const count = useCounter(value, 1800, active);
   return (
@@ -120,30 +139,171 @@ function StatCard({ value, suffix, label, active }: { value: number; suffix: str
   );
 }
 
-// ─── Scroll Reveal Wrapper ─────────────────────────────────────────────────────
+// ─── Reveal ───────────────────────────────────────────────────────────────────
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const { ref, inView } = useInView();
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(32px)",
-        transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`,
-      }}
-    >
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? "translateY(0)" : "translateY(32px)",
+      transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`,
+    }}>
       {children}
     </div>
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── HapticLink ───────────────────────────────────────────────────────────────
+function HapticLink({ href, children, className, target, rel, "aria-label": ariaLabel, hapticType = "light" }: {
+  href: string; children: React.ReactNode; className?: string;
+  target?: string; rel?: string; "aria-label"?: string;
+  hapticType?: "light" | "medium" | "heavy";
+}) {
+  const haptic = useHaptic();
+  return (
+    <a href={href} target={target} rel={rel} aria-label={ariaLabel} className={className}
+      onPointerDown={() => haptic(hapticType)}>
+      {children}
+    </a>
+  );
+}
+
+// ─── DeliveryTracker ──────────────────────────────────────────────────────────
+function DeliveryTracker() {
+  const [activeStep, setActiveStep] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const haptic = useHaptic();
+  const { ref, inView } = useInView(0.3);
+
+  useEffect(() => {
+    if (inView && !isPlaying && activeStep === 0) {
+      setTimeout(() => setIsPlaying(true), 600);
+    }
+  }, [inView]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    if (activeStep >= TRACKER_STEPS.length - 1) { setIsPlaying(false); return; }
+    setProgress(0);
+    const duration = 2200;
+    const interval = 30;
+    let elapsed = 0;
+    const timer = setInterval(() => {
+      elapsed += interval;
+      setProgress(Math.min((elapsed / duration) * 100, 100));
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        haptic("medium");
+        setActiveStep((s) => s + 1);
+      }
+    }, interval);
+    return () => clearInterval(timer);
+  }, [isPlaying, activeStep]);
+
+  const restart = () => {
+    haptic("heavy");
+    setActiveStep(0);
+    setProgress(0);
+    setIsPlaying(true);
+  };
+
+  const isDone = activeStep >= TRACKER_STEPS.length - 1;
+
+  return (
+    <div ref={ref} className="relative bg-foreground text-background rounded-3xl overflow-hidden p-6 md:p-8 shadow-2xl border border-background/10">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className={`w-2.5 h-2.5 rounded-full ${isDone ? "bg-green-400" : "bg-yellow animate-pulse"}`} />
+            <span className="text-xs font-semibold text-background/60 uppercase tracking-wider">
+              {isDone ? "Livraison terminée" : "Suivi en direct"}
+            </span>
+          </div>
+          <div className="font-display font-bold text-xl">Commande #NK-2847</div>
+          <div className="text-sm text-background/50">Baguida → Hédzranawoé, Lomé</div>
+        </div>
+        <button onPointerDown={() => haptic("medium")} onClick={restart}
+          className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-yellow hover:text-yellow-foreground transition-all duration-200 active:scale-90"
+          aria-label="Rejouer" title="Rejouer la démo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Livreur card */}
+      <div className="flex items-center gap-3 bg-background/5 rounded-2xl p-4 mb-6 border border-background/10">
+        <div className="w-12 h-12 rounded-full bg-yellow flex items-center justify-center font-display font-bold text-yellow-foreground text-lg shrink-0">K</div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold">Koffi Mensah</div>
+          <div className="text-xs text-background/50">Votre livreur · ⭐ 4.9</div>
+        </div>
+        <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" hapticType="light"
+          className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center shrink-0 hover:scale-110 transition-transform active:scale-90"
+          aria-label="Contacter le livreur">
+          <MessageCircle className="w-4 h-4 text-white" />
+        </HapticLink>
+      </div>
+
+      {/* Steps */}
+      <div className="space-y-1 mb-6">
+        {TRACKER_STEPS.map((step, i) => {
+          const isCompleted = i < activeStep;
+          const isCurrent = i === activeStep;
+          return (
+            <div key={step.id} className="relative">
+              <div className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-500 ${isCurrent ? "bg-yellow/15 border border-yellow/30" : isCompleted ? "opacity-60" : "opacity-30"}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${isCompleted ? "bg-green-500 text-white" : isCurrent ? "bg-yellow text-yellow-foreground" : "bg-background/10 text-background/40"}`}>
+                  {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : isCurrent ? <step.icon className="w-4 h-4" style={{ animation: "pulse 1.5s ease-in-out infinite" }} /> : <Circle className="w-4 h-4" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-sm font-semibold ${isCurrent ? "text-yellow" : isCompleted ? "text-background/80" : "text-background/30"}`}>{step.label}</span>
+                    {(isCompleted || isCurrent) && <span className="text-xs text-background/40 shrink-0">{step.time}</span>}
+                  </div>
+                  {isCurrent && <div className="text-xs text-background/50 mt-0.5">{step.detail}</div>}
+                </div>
+              </div>
+              {isCurrent && i < TRACKER_STEPS.length - 1 && (
+                <div className="ml-7 mt-1 mb-1 h-0.5 bg-background/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-yellow rounded-full" style={{ width: `${progress}%`, transition: "width 30ms linear" }} />
+                </div>
+              )}
+              {isCompleted && i < TRACKER_STEPS.length - 1 && <div className="ml-7 mt-1 mb-1 h-0.5 bg-green-500/40 rounded-full" />}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ETA / Done */}
+      {!isDone ? (
+        <div className="flex items-center justify-between bg-background/5 rounded-2xl px-4 py-3 border border-background/10">
+          <div className="text-xs text-background/50">Temps estimé</div>
+          <div className="font-display font-bold text-yellow">~{Math.max(2, (TRACKER_STEPS.length - 1 - activeStep) * 8)} min</div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center gap-2 bg-green-500/20 border border-green-500/30 rounded-2xl px-4 py-3">
+          <CheckCircle2 className="w-4 h-4 text-green-400" />
+          <span className="text-sm font-semibold text-green-400">Livré avec succès ! 🎉</span>
+        </div>
+      )}
+      <div className="mt-4 text-center">
+        <span className="text-xs text-background/25">— Démonstration interactive —</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 function Index() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
   const [statsVisible, setStatsVisible] = useState(false);
+  const haptic = useHaptic();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -162,18 +322,13 @@ function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
 
-      {/* ── Floating WhatsApp Button ── */}
-      <a
-        href={SOCIAL_LINKS.whatsapp}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-[0_8px_32px_-4px_#25D366aa] hover:scale-110 transition-transform"
-        aria-label="WhatsApp"
-      >
+      {/* Floating WhatsApp */}
+      <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" hapticType="medium" aria-label="WhatsApp"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-[0_8px_32px_-4px_#25D366aa] hover:scale-110 active:scale-95 transition-transform">
         <MessageCircle className="w-6 h-6" />
-      </a>
+      </HapticLink>
 
-      {/* ── Nav ── */}
+      {/* Nav */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "backdrop-blur-md bg-background/90 border-b border-border shadow-sm" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="#" className="flex items-center gap-3 font-display font-bold text-lg">
@@ -186,28 +341,30 @@ function Index() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <a href="#contact" className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium hover:scale-105 transition">
+            <HapticLink href="#contact" hapticType="light"
+              className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium hover:scale-105 active:scale-95 transition">
               Commander <ArrowRight className="w-4 h-4" />
-            </a>
-            <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden p-2 rounded-lg hover:bg-secondary transition" aria-label="Menu">
+            </HapticLink>
+            <button onPointerDown={() => haptic("light")} onClick={() => setMenuOpen(!menuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-secondary active:scale-90 transition" aria-label="Menu">
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
-        {/* Mobile menu */}
         <div className={`md:hidden overflow-hidden transition-all duration-300 ${menuOpen ? "max-h-80 border-b border-border" : "max-h-0"} bg-background/95 backdrop-blur-md`}>
           <nav className="px-6 py-4 flex flex-col gap-4 text-sm font-medium">
             {["Services", "Avantages", "Fonctionnement", "Localisation", "Contact"].map((item) => (
-              <a key={item} href={`#${item.toLowerCase()}`} onClick={() => setMenuOpen(false)} className="hover:text-yellow transition-colors py-1">{item}</a>
+              <a key={item} href={`#${item.toLowerCase()}`} onClick={() => { setMenuOpen(false); haptic("light"); }} className="hover:text-yellow transition-colors py-1">{item}</a>
             ))}
-            <a href={SOCIAL_LINKS.whatsapp} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-foreground text-background font-medium w-fit">
+            <HapticLink href={SOCIAL_LINKS.whatsapp} hapticType="medium"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-foreground text-background font-medium w-fit active:scale-95">
               Commander <ArrowRight className="w-4 h-4" />
-            </a>
+            </HapticLink>
           </nav>
         </div>
       </header>
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
         <div className="absolute -top-20 -right-32 w-[600px] h-[600px] rounded-full bg-yellow/20 blur-3xl animate-pulse" style={{ animationDuration: "4s" }} />
         <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full bg-yellow/10 blur-3xl" />
@@ -230,20 +387,15 @@ function Index() {
               Repas, colis, courses ou documents acheminés rapidement, 7j/7.
             </p>
             <div className="flex flex-wrap gap-4 animate-fade-up" style={{ animationDelay: "0.45s" }}>
-              <a
-                href={SOCIAL_LINKS.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-yellow text-yellow-foreground font-semibold shadow-[0_10px_40px_-10px_var(--yellow)] hover:scale-105 hover:shadow-[0_15px_50px_-10px_var(--yellow)] transition"
-              >
+              <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" hapticType="heavy"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-yellow text-yellow-foreground font-semibold shadow-[0_10px_40px_-10px_var(--yellow)] hover:scale-105 hover:shadow-[0_15px_50px_-10px_var(--yellow)] active:scale-95 transition">
                 Commander maintenant <ArrowRight className="w-4 h-4" />
-              </a>
-              <a href="#contact" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full border-2 border-foreground font-semibold hover:bg-foreground hover:text-background transition">
+              </HapticLink>
+              <HapticLink href="#contact" hapticType="light"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full border-2 border-foreground font-semibold hover:bg-foreground hover:text-background active:scale-95 transition">
                 Nous contacter
-              </a>
+              </HapticLink>
             </div>
-
-            {/* Stats with animated counters */}
             <div ref={statsRef} className="flex items-center gap-6 mt-10 pt-10 border-t border-border animate-fade-up" style={{ animationDelay: "0.6s" }}>
               {stats.map((s, i) => (
                 <div key={s.label} className="flex items-center gap-6">
@@ -252,8 +404,6 @@ function Index() {
                 </div>
               ))}
             </div>
-
-            {/* Social links under hero */}
             <div className="flex items-center gap-3 mt-6 animate-fade-up" style={{ animationDelay: "0.7s" }}>
               <span className="text-xs text-muted-foreground">Suivez-nous :</span>
               {[
@@ -261,25 +411,18 @@ function Index() {
                 { href: SOCIAL_LINKS.tiktok, icon: TikTokIcon, label: "TikTok" },
                 { href: SOCIAL_LINKS.instagram, icon: Instagram, label: "Instagram" },
               ].map(({ href, icon: Icon, label }) => (
-                <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
-                  className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:bg-yellow hover:text-yellow-foreground transition group">
+                <HapticLink key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} hapticType="light"
+                  className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:bg-yellow hover:text-yellow-foreground active:scale-90 transition">
                   <Icon className="w-3.5 h-3.5" />
-                </a>
+                </HapticLink>
               ))}
             </div>
           </div>
-
           <div className="relative animate-fade-up" style={{ animationDelay: "0.35s" }}>
             <div className="absolute inset-0 bg-yellow rounded-[2rem] rotate-3" />
-            <img
-              src={heroImage}
-              alt="Livreur NésorKaba sur une moto jaune avec colis"
-              width={1536}
-              height={1024}
-              loading="eager"
+            <img src={heroImage} alt="Livreur NésorKaba sur une moto jaune avec colis" width={1536} height={1024} loading="eager"
               className="relative rounded-[2rem] object-contain w-full h-auto max-h-[600px] bg-background shadow-[0_20px_50px_-20px_oklch(0.13_0_0/0.25)]"
-              style={{ animation: "floatSlow 6s ease-in-out infinite" }}
-            />
+              style={{ animation: "floatSlow 6s ease-in-out infinite" }} />
             <div className="absolute -bottom-6 -left-6 bg-background border border-border rounded-2xl p-4 shadow-xl flex items-center gap-3"
               style={{ animation: "floatSlow 6s ease-in-out infinite", animationDelay: "1s" }}>
               <img src={logo} alt="" className="w-12 h-12 rounded-full" />
@@ -294,7 +437,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ── Services ── */}
+      {/* Services */}
       <section id="services" className="py-24 bg-secondary">
         <div className="max-w-7xl mx-auto px-6">
           <Reveal className="max-w-2xl mb-16">
@@ -317,7 +460,44 @@ function Index() {
         </div>
       </section>
 
-      {/* ── Avantages ── */}
+      {/* Tracker Section */}
+      <section id="tracker" className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <Reveal>
+              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Suivi en temps réel</span>
+              <h2 className="font-display text-4xl md:text-5xl font-bold mt-3 mb-6">
+                Suivez votre livraison{" "}
+                <span className="relative inline-block">
+                  <span className="relative z-10">en direct</span>
+                  <span className="absolute inset-x-0 bottom-1 h-3 bg-yellow -z-0" />
+                </span>
+              </h2>
+              <p className="text-muted-foreground text-lg mb-6">
+                À chaque étape, vous savez exactement où se trouve votre commande.
+                Transparence totale, de la prise en charge jusqu'à la remise.
+              </p>
+              <ul className="space-y-3">
+                {["Notifications à chaque étape", "Contact direct avec le livreur", "Heure d'arrivée estimée en temps réel"].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-yellow shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" hapticType="heavy"
+                className="inline-flex items-center gap-2 mt-8 px-6 py-3.5 rounded-full bg-yellow text-yellow-foreground font-semibold hover:scale-105 active:scale-95 transition shadow-[0_8px_30px_-8px_var(--yellow)]">
+                Commander maintenant <ArrowRight className="w-4 h-4" />
+              </HapticLink>
+            </Reveal>
+            <Reveal delay={0.15}>
+              <DeliveryTracker />
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* Avantages */}
       <section id="avantages" className="py-24 bg-foreground text-background">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -346,7 +526,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ── Fonctionnement ── */}
+      {/* Fonctionnement */}
       <section id="fonctionnement" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           <Reveal className="text-center max-w-2xl mx-auto mb-16">
@@ -367,9 +547,7 @@ function Index() {
                     <h3 className="font-display text-xl font-bold mb-2">{step.title}</h3>
                     <p className="text-muted-foreground text-sm">{step.desc}</p>
                   </div>
-                  {i < steps.length - 1 && (
-                    <ArrowRight className="hidden lg:block absolute top-1/2 -right-5 -translate-y-1/2 w-6 h-6 text-yellow z-10" />
-                  )}
+                  {i < steps.length - 1 && <ArrowRight className="hidden lg:block absolute top-1/2 -right-5 -translate-y-1/2 w-6 h-6 text-yellow z-10" />}
                 </div>
               </Reveal>
             ))}
@@ -377,7 +555,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ── Témoignages ── */}
+      {/* Témoignages */}
       <section className="py-24 bg-secondary">
         <div className="max-w-7xl mx-auto px-6">
           <Reveal className="text-center max-w-2xl mx-auto mb-16">
@@ -388,16 +566,10 @@ function Index() {
             {testimonials.map((t, i) => (
               <Reveal key={t.name} delay={i * 0.1}>
                 <div className="bg-background rounded-2xl p-8 border border-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 h-full">
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(5)].map((_, j) => (
-                      <Star key={j} className="w-4 h-4 fill-yellow text-yellow" />
-                    ))}
-                  </div>
+                  <div className="flex gap-1 mb-4">{[...Array(5)].map((_, j) => <Star key={j} className="w-4 h-4 fill-yellow text-yellow" />)}</div>
                   <p className="text-foreground/80 mb-6 leading-relaxed">"{t.text}"</p>
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-yellow flex items-center justify-center font-display font-bold text-yellow-foreground">
-                      {t.name[0]}
-                    </div>
+                    <div className="w-11 h-11 rounded-full bg-yellow flex items-center justify-center font-display font-bold text-yellow-foreground">{t.name[0]}</div>
                     <div>
                       <div className="font-semibold">{t.name}</div>
                       <div className="text-xs text-muted-foreground">{t.role}</div>
@@ -410,7 +582,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ── Localisation ── */}
+      {/* Localisation */}
       <section id="localisation" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           <Reveal className="text-center max-w-2xl mx-auto mb-12">
@@ -420,16 +592,9 @@ function Index() {
           </Reveal>
           <Reveal>
             <div className="rounded-3xl overflow-hidden border border-border shadow-xl">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.5!2d1.316760!3d6.174995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTAnMjkuOSJOIDHCsDE5JzAwLjMiRQ!5e0!3m2!1sfr!2stg!4v1"
-                width="100%"
-                height="420"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Localisation NésorKaba Delivery — PAPY SPOT, Baguida, Lomé"
-              />
+              <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.5!2d1.316760!3d6.174995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTAnMjkuOSJOIDHCsDE5JzAwLjMiRQ!5e0!3m2!1sfr!2stg!4v1"
+                width="100%" height="420" style={{ border: 0 }} allowFullScreen loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade" title="Localisation NésorKaba Delivery — PAPY SPOT, Baguida, Lomé" />
             </div>
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-secondary rounded-2xl p-6 border border-border">
               <div className="flex items-start gap-3">
@@ -442,20 +607,16 @@ function Index() {
                   <div className="text-xs text-muted-foreground mt-0.5">6.174995, 1.316760</div>
                 </div>
               </div>
-              <a
-                href={SOCIAL_LINKS.maps}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-semibold text-sm hover:scale-105 transition shrink-0"
-              >
+              <HapticLink href={SOCIAL_LINKS.maps} target="_blank" rel="noopener noreferrer" hapticType="medium"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-semibold text-sm hover:scale-105 active:scale-95 transition shrink-0">
                 <MapPin className="w-4 h-4" /> Ouvrir dans Maps
-              </a>
+              </HapticLink>
             </div>
           </Reveal>
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* CTA */}
       <section className="py-20">
         <div className="max-w-5xl mx-auto px-6">
           <Reveal>
@@ -463,19 +624,17 @@ function Index() {
               <div className="absolute -bottom-20 -right-20 w-72 h-72 rounded-full bg-yellow-foreground/10" />
               <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-yellow-foreground/5" />
               <div className="relative max-w-2xl">
-                <h2 className="font-display text-3xl md:text-5xl font-bold text-yellow-foreground mb-4">
-                  Prêt à expédier votre prochaine livraison ?
-                </h2>
-                <p className="text-yellow-foreground/80 text-lg mb-8">
-                  Contactez NésorKaba dès maintenant pour une prise en charge immédiate.
-                </p>
+                <h2 className="font-display text-3xl md:text-5xl font-bold text-yellow-foreground mb-4">Prêt à expédier votre prochaine livraison ?</h2>
+                <p className="text-yellow-foreground/80 text-lg mb-8">Contactez NésorKaba dès maintenant pour une prise en charge immédiate.</p>
                 <div className="flex flex-wrap gap-4">
-                  <a href="tel:+22870074420" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-foreground text-background font-semibold hover:scale-105 transition">
+                  <HapticLink href="tel:+22870074420" hapticType="medium"
+                    className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-foreground text-background font-semibold hover:scale-105 active:scale-95 transition">
                     <Phone className="w-4 h-4" /> +228 70 07 44 20
-                  </a>
-                  <a href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-background text-foreground font-semibold hover:scale-105 transition">
+                  </HapticLink>
+                  <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" hapticType="heavy"
+                    className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-background text-foreground font-semibold hover:scale-105 active:scale-95 transition">
                     <MessageCircle className="w-4 h-4" /> WhatsApp
-                  </a>
+                  </HapticLink>
                 </div>
               </div>
             </div>
@@ -483,7 +642,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <footer id="contact" className="bg-foreground text-background pt-20 pb-8">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-background/10">
@@ -493,31 +652,16 @@ function Index() {
                 NésorKaba
               </div>
               <p className="text-yellow font-semibold mb-3 italic">« {TAGLINE} »</p>
-              <p className="text-background/60 text-sm">
-                Société de livraison basée à Baguida (Lomé, Togo).
-                Fondée en mars 2026 par M. Yevuyibor Kodjo Michael.
-              </p>
-              {/* Social Icons */}
+              <p className="text-background/60 text-sm">Société de livraison basée à Baguida (Lomé, Togo). Fondée en mars 2026 par M. Yevuyibor Kodjo Michael.</p>
               <div className="flex gap-3 mt-5">
-                {[
-                  { href: SOCIAL_LINKS.facebook, icon: Facebook, label: "Facebook" },
-                  { href: SOCIAL_LINKS.tiktok, icon: TikTokIcon, label: "TikTok" },
-                  { href: SOCIAL_LINKS.instagram, icon: Instagram, label: "Instagram" },
-                ].map(({ href, icon: Icon, label }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-yellow hover:text-yellow-foreground transition-all duration-300 hover:scale-110"
-                  >
+                {[{ href: SOCIAL_LINKS.facebook, icon: Facebook, label: "Facebook" }, { href: SOCIAL_LINKS.tiktok, icon: TikTokIcon, label: "TikTok" }, { href: SOCIAL_LINKS.instagram, icon: Instagram, label: "Instagram" }].map(({ href, icon: Icon, label }) => (
+                  <HapticLink key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} hapticType="light"
+                    className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-yellow hover:text-yellow-foreground active:scale-90 transition-all duration-300 hover:scale-110">
                     <Icon className="w-4 h-4" />
-                  </a>
+                  </HapticLink>
                 ))}
               </div>
             </div>
-
             <div>
               <h4 className="font-display font-bold mb-4">Contact</h4>
               <ul className="space-y-3 text-sm text-background/70">
@@ -525,62 +669,38 @@ function Index() {
                 <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-yellow shrink-0" /><a href="tel:+22896362747" className="hover:text-yellow transition">+228 96 36 27 47</a></li>
                 <li className="flex items-center gap-3"><MessageCircle className="w-4 h-4 text-yellow shrink-0" /><a href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" className="hover:text-yellow transition">WhatsApp 24/7</a></li>
                 <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-yellow shrink-0" /><a href="mailto:contact@nesorkaba.tg" className="hover:text-yellow transition">contact@nesorkaba.tg</a></li>
-                <li className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 text-yellow shrink-0 mt-0.5" />
-                  <a href={SOCIAL_LINKS.maps} target="_blank" rel="noopener noreferrer" className="hover:text-yellow transition">PAPY SPOT — Baguida, Lomé, Togo</a>
-                </li>
+                <li className="flex items-start gap-3"><MapPin className="w-4 h-4 text-yellow shrink-0 mt-0.5" /><a href={SOCIAL_LINKS.maps} target="_blank" rel="noopener noreferrer" className="hover:text-yellow transition">PAPY SPOT — Baguida, Lomé, Togo</a></li>
               </ul>
             </div>
-
             <div>
               <h4 className="font-display font-bold mb-4">Services</h4>
               <ul className="space-y-2 text-sm text-background/70">
-                {services.map((s) => (
-                  <li key={s.title} className="hover:text-yellow transition cursor-default">{s.title}</li>
-                ))}
+                {services.map((s) => <li key={s.title} className="hover:text-yellow transition cursor-default">{s.title}</li>)}
               </ul>
             </div>
-
             <div>
               <h4 className="font-display font-bold mb-4">Horaires</h4>
               <ul className="space-y-2 text-sm text-background/70">
                 <li>Lundi — Dimanche</li>
                 <li className="text-yellow font-semibold">24h/24 — 7j/7</li>
               </ul>
-              <a
-                href={SOCIAL_LINKS.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-full bg-yellow text-yellow-foreground font-semibold text-sm hover:scale-105 transition"
-              >
+              <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" rel="noopener noreferrer" hapticType="medium"
+                className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-full bg-yellow text-yellow-foreground font-semibold text-sm hover:scale-105 active:scale-95 transition">
                 <MessageCircle className="w-4 h-4" /> Chatter
-              </a>
-
-              {/* Suivez-nous footer */}
+              </HapticLink>
               <div className="mt-6">
                 <h4 className="font-display font-bold mb-3 text-sm">Suivez-nous</h4>
                 <div className="flex gap-2">
-                  {[
-                    { href: SOCIAL_LINKS.facebook, icon: Facebook, label: "Facebook" },
-                    { href: SOCIAL_LINKS.tiktok, icon: TikTokIcon, label: "TikTok" },
-                    { href: SOCIAL_LINKS.instagram, icon: Instagram, label: "Instagram" },
-                  ].map(({ href, icon: Icon, label }) => (
-                    <a
-                      key={label}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={label}
-                      className="w-9 h-9 rounded-full bg-background/10 flex items-center justify-center hover:bg-yellow hover:text-yellow-foreground transition-all duration-300 hover:scale-110 text-xs font-bold"
-                    >
+                  {[{ href: SOCIAL_LINKS.facebook, icon: Facebook, label: "Facebook" }, { href: SOCIAL_LINKS.tiktok, icon: TikTokIcon, label: "TikTok" }, { href: SOCIAL_LINKS.instagram, icon: Instagram, label: "Instagram" }].map(({ href, icon: Icon, label }) => (
+                    <HapticLink key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} hapticType="light"
+                      className="w-9 h-9 rounded-full bg-background/10 flex items-center justify-center hover:bg-yellow hover:text-yellow-foreground active:scale-90 transition-all duration-300 hover:scale-110">
                       <Icon className="w-3.5 h-3.5" />
-                    </a>
+                    </HapticLink>
                   ))}
                 </div>
               </div>
             </div>
           </div>
-
           <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-background/50">
             <p>© 2026 NésorKaba Delivery — Fondée par Yevuyibor Kodjo Michael. Tous droits réservés.</p>
             <div className="flex gap-6">
@@ -591,19 +711,10 @@ function Index() {
         </div>
       </footer>
 
-      {/* ── Global animations ── */}
       <style>{`
-        @keyframes floatSlow {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-12px); }
-        }
-        @keyframes fade-up {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-up {
-          animation: fade-up 0.7s ease both;
-        }
+        @keyframes floatSlow { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+        @keyframes fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-up { animation: fade-up 0.7s ease both; }
       `}</style>
     </div>
   );
