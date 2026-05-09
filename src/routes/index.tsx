@@ -67,7 +67,7 @@ export default function Index() {
   const [heroSlide, setHeroSlide] = useState(0);
   const haptic = useHaptic();
 
-  // Nouveau Jaune plus "Design" : #FFC107 ou #FFCC00
+  // Jaune Premium
   const BRAND_YELLOW = "#FFCC00"; 
 
   useEffect(() => {
@@ -84,27 +84,22 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-white text-black overflow-x-hidden" style={{ "--brand-yellow": BRAND_YELLOW } as any}>
       
-      {/* ── WhatsApp Button ── */}
+      {/* ── WhatsApp Floating Button ── */}
       <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" hapticType="medium"
         className="fixed bottom-6 right-5 z-[100] w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl active:scale-90 transition-transform">
         <MessageCircle className="w-8 h-8" fill="currentColor" />
       </HapticLink>
 
-      {/* ── Header ── */}
+      {/* ── Header (Bouton Commander supprimé) ── */}
       <header className={`fixed top-0 inset-x-0 z-[80] transition-all duration-300 ${scrolled ? "bg-black/90 backdrop-blur-md text-white py-3" : "bg-transparent py-5"}`}>
         <div className="max-w-7xl mx-auto px-5 flex items-center justify-between">
           <a href="#" className="flex items-center gap-2">
             <img src={logo} alt="Logo" className="w-10 h-10 rounded-full border-2 border-yellow-400" />
-            <span className="font-display font-black text-xl tracking-tighter">NésorKaba</span>
+            <span className={`font-display font-black text-xl tracking-tighter ${scrolled ? "text-white" : "text-black"}`}>NésorKaba</span>
           </a>
-          <div className="flex items-center gap-2">
-            <HapticLink href={SOCIAL_LINKS.whatsapp} className="bg-[#FFCC00] text-black px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-tight">
-              Commander →
-            </HapticLink>
-            <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 bg-white/10 rounded-full text-white">
-              {menuOpen ? <X /> : <Menu />}
-            </button>
-          </div>
+          <button onClick={() => setMenuOpen(!menuOpen)} className={`p-2 rounded-full ${scrolled ? "bg-white/10 text-white" : "bg-black/5 text-black"}`}>
+            {menuOpen ? <X /> : <Menu />}
+          </button>
         </div>
       </header>
 
@@ -115,15 +110,15 @@ export default function Index() {
           {["Services", "Avantages", "Localisation"].map(item => (
             <a key={item} href={`#${item.toLowerCase()}`} onClick={() => setMenuOpen(false)} className="active:text-[#FFCC00]">{item}</a>
           ))}
-          <HapticLink href={SOCIAL_LINKS.whatsapp} className="bg-[#FFCC00] text-black px-12 py-4 rounded-full mt-6 text-xl">Commander</HapticLink>
+          <HapticLink href={SOCIAL_LINKS.whatsapp} className="bg-[#FFCC00] text-black px-12 py-4 rounded-full mt-6 text-xl font-black">Commander</HapticLink>
         </div>
       </div>
 
-      {/* ── Hero Section (Jaune Amélioré & Correction transition) ── */}
-      <section className="pt-24 pb-16 bg-[#FFCC00] relative">
+      {/* ── Hero Section (Jaune Premium & Pas d'arrondi en bas) ── */}
+      <section className="pt-28 pb-16 bg-[#FFCC00] relative">
         <div className="px-5 max-w-7xl mx-auto flex flex-col gap-8">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-black text-[#FFCC00] rounded-full text-[10px] font-black uppercase tracking-widest">
+          <div className="space-y-4 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-black text-[#FFCC00] rounded-full text-[10px] font-black uppercase tracking-widest mx-auto">
               <span className="w-2 h-2 bg-[#FFCC00] rounded-full animate-pulse" /> Lomé, Togo
             </div>
             <h1 className="text-[2.6rem] font-display font-black leading-[0.95] text-black tracking-tighter">
@@ -131,25 +126,25 @@ export default function Index() {
               <span className="text-white drop-shadow-md">aujourd'hui,</span> <br />
               recevez vite.
             </h1>
-            <p className="text-black/80 text-sm font-bold leading-tight max-w-[280px]">
+            <p className="text-black/80 text-sm font-bold leading-tight mx-auto max-w-[280px]">
               La livraison la plus rapide de Baguida. Repas, colis & courses 7j/7.
             </p>
             <div className="flex gap-3 pt-2">
               <HapticLink href={SOCIAL_LINKS.whatsapp} hapticType="heavy" className="flex-1 bg-black text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-black/20">
                 Commander <ArrowRight size={18} />
               </HapticLink>
-              <HapticLink href="tel:+22870074420" hapticType="medium" className="flex-1 bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 border-b-4 border-black/10">
+              <HapticLink href="tel:+22870074420" hapticType="medium" className="flex-1 bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 border-b-4 border-black/10 shadow-sm">
                 <Phone size={18} /> Appeler
               </HapticLink>
             </div>
           </div>
 
-          {/* Carousel Photo */}
+          {/* Carousel Photo (Object-top pour voir la tête) */}
           <div className="relative w-full aspect-[4/5] rounded-[2.5rem] border-[6px] border-black overflow-hidden shadow-2xl">
             {[heroImage, hero2Image].map((img, i) => (
               <img key={i} src={img} alt="Livreur" className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-1000 ${heroSlide === i ? "opacity-100" : "opacity-0"}`} />
             ))}
-            {/* Badge */}
+            {/* Badge flottant */}
             <div className="absolute bottom-4 left-4 right-4 bg-black/95 p-4 rounded-[1.5rem] flex items-center gap-4 text-white border border-white/20">
               <img src={logo} className="w-10 h-10 rounded-full border border-[#FFCC00]" alt="Logo" />
               <div>
@@ -163,7 +158,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* ── Services (Correction des arrondis "oreilles") ── */}
+      {/* ── Services (Arrondi seulement en haut pour effacer les "oreilles") ── */}
       <section id="services" className="bg-black text-white rounded-t-[3.5rem] pt-16 pb-20 px-6 -mt-12 relative z-20">
         <div className="max-w-7xl mx-auto">
           <div className="mb-12">
@@ -192,7 +187,7 @@ export default function Index() {
           <h2 className="text-3xl font-display font-black tracking-tight">Suivi en Direct</h2>
           <div className="w-12 h-1 bg-black mx-auto mt-2" />
         </div>
-        <div className="bg-black text-white p-7 rounded-[2.5rem] shadow-2xl">
+        <div className="bg-black text-white p-7 rounded-[2.5rem] shadow-2xl max-w-sm mx-auto">
             <div className="space-y-7">
                 {TRACKER_STEPS.map((step, i) => (
                     <div key={i} className={`flex items-center gap-5 ${i > 1 ? "opacity-20" : ""}`}>
@@ -209,7 +204,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* ── Footer Original Restauré ── */}
+      {/* ── Footer Restauré (Version Originale Noire) ── */}
       <footer id="contact" className="bg-black text-white pt-16 pb-10 rounded-t-[3.5rem]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
@@ -251,7 +246,7 @@ export default function Index() {
             </HapticLink>
           </div>
 
-          <div className="pt-8 border-t border-white/5 text-center space-y-4">
+          <div className="pt-8 border-t border-white/5 text-center">
             <p className="text-[9px] text-white/20 uppercase tracking-[0.2em] font-bold">
               © 2026 NésorKaba Delivery — Lomé, Togo
             </p>
@@ -261,7 +256,7 @@ export default function Index() {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
         .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
       `}</style>
     </div>
