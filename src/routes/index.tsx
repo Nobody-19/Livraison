@@ -60,15 +60,74 @@ function HapticLink({ href, children, className, target, rel, hapticType = "ligh
   );
 }
 
+// ─── Delivery Tracker Component ───
+function DeliveryTracker() {
+  const [activeStep, setActiveStep] = useState(-1);
+  const haptic = useHaptic();
+  const trackerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && activeStep === -1) {
+          // Lancer l'animation étape par étape
+          let step = 0;
+          const interval = setInterval(() => {
+            setActiveStep(step);
+            haptic("light");
+            step++;
+            if (step >= TRACKER_STEPS.length) clearInterval(interval);
+          }, 1500); // 1.5 seconde entre chaque étape
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (trackerRef.current) observer.observe(trackerRef.current);
+    return () => observer.disconnect();
+  }, [activeStep, haptic]);
+
+  return (
+    <div ref={trackerRef} className="bg-black text-white p-7 rounded-[2.5rem] shadow-2xl border border-white/5 max-w-sm mx-auto">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${activeStep === 4 ? "bg-green-500" : "bg-yellow-400 animate-pulse"}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
+                {activeStep === 4 ? "Livré" : "Suivi en direct"}
+            </span>
+        </div>
+        <span className="text-[10px] font-black text-yellow-400">#NK-2847</span>
+      </div>
+
+      <div className="space-y-7">
+        {TRACKER_STEPS.map((step, i) => {
+          const isReached = i <= activeStep;
+          const isCurrent = i === activeStep;
+          
+          return (
+            <div key={i} className={`flex items-center gap-5 transition-all duration-700 ${isReached ? "opacity-100" : "opacity-10"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 
+                ${isReached ? "bg-[#FFCC00] text-black shadow-[0_0_20px_rgba(255,204,0,0.4)] scale-110" : "bg-white/10 text-white"}`}>
+                {isReached && i < activeStep ? <CheckCircle2 size={20} /> : <step.icon size={20} className={isCurrent ? "animate-pulse" : ""} />}
+              </div>
+              <div className={`flex-1 border-b border-white/5 pb-3 flex justify-between items-center transition-colors duration-500 ${isCurrent ? "text-[#FFCC00]" : "text-white"}`}>
+                <span className={`text-sm font-black uppercase tracking-tight`}>{step.label}</span>
+                <span className="text-[10px] font-bold opacity-40">{step.time}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function Index() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [heroSlide, setHeroSlide] = useState(0);
   const haptic = useHaptic();
-
-  // Jaune Premium
-  const BRAND_YELLOW = "#FFCC00"; 
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
@@ -82,7 +141,7 @@ export default function Index() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-black overflow-x-hidden" style={{ "--brand-yellow": BRAND_YELLOW } as any}>
+    <div className="min-h-screen bg-white text-black overflow-x-hidden">
       
       {/* ── WhatsApp Floating Button ── */}
       <HapticLink href={SOCIAL_LINKS.whatsapp} target="_blank" hapticType="medium"
@@ -90,7 +149,7 @@ export default function Index() {
         <MessageCircle className="w-8 h-8" fill="currentColor" />
       </HapticLink>
 
-      {/* ── Header (Bouton Commander supprimé) ── */}
+      {/* ── Header ── */}
       <header className={`fixed top-0 inset-x-0 z-[80] transition-all duration-300 ${scrolled ? "bg-black/90 backdrop-blur-md text-white py-3" : "bg-transparent py-5"}`}>
         <div className="max-w-7xl mx-auto px-5 flex items-center justify-between">
           <a href="#" className="flex items-center gap-2">
@@ -114,7 +173,7 @@ export default function Index() {
         </div>
       </div>
 
-      {/* ── Hero Section (Jaune Premium & Pas d'arrondi en bas) ── */}
+      {/* ── Hero Section ── */}
       <section className="pt-28 pb-16 bg-[#FFCC00] relative">
         <div className="px-5 max-w-7xl mx-auto flex flex-col gap-8">
           <div className="space-y-4 text-center">
@@ -139,12 +198,10 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Carousel Photo (Object-top pour voir la tête) */}
           <div className="relative w-full aspect-[4/5] rounded-[2.5rem] border-[6px] border-black overflow-hidden shadow-2xl">
             {[heroImage, hero2Image].map((img, i) => (
               <img key={i} src={img} alt="Livreur" className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-1000 ${heroSlide === i ? "opacity-100" : "opacity-0"}`} />
             ))}
-            {/* Badge flottant */}
             <div className="absolute bottom-4 left-4 right-4 bg-black/95 p-4 rounded-[1.5rem] flex items-center gap-4 text-white border border-white/20">
               <img src={logo} className="w-10 h-10 rounded-full border border-[#FFCC00]" alt="Logo" />
               <div>
@@ -158,7 +215,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* ── Services (Arrondi seulement en haut pour effacer les "oreilles") ── */}
+      {/* ── Services ── */}
       <section id="services" className="bg-black text-white rounded-t-[3.5rem] pt-16 pb-20 px-6 -mt-12 relative z-20">
         <div className="max-w-7xl mx-auto">
           <div className="mb-12">
@@ -181,30 +238,16 @@ export default function Index() {
         </div>
       </section>
 
-      {/* ── Tracker ── */}
+      {/* ── Tracker Animé ── */}
       <section className="py-20 px-5 bg-white">
         <div className="text-center mb-10">
           <h2 className="text-3xl font-display font-black tracking-tight">Suivi en Direct</h2>
           <div className="w-12 h-1 bg-black mx-auto mt-2" />
         </div>
-        <div className="bg-black text-white p-7 rounded-[2.5rem] shadow-2xl max-w-sm mx-auto">
-            <div className="space-y-7">
-                {TRACKER_STEPS.map((step, i) => (
-                    <div key={i} className={`flex items-center gap-5 ${i > 1 ? "opacity-20" : ""}`}>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${i <= 1 ? "bg-[#FFCC00] text-black shadow-lg shadow-[#FFCC00]/30" : "bg-white/10"}`}>
-                            <step.icon size={20} />
-                        </div>
-                        <div className="flex-1 border-b border-white/5 pb-3 flex justify-between items-center">
-                            <span className="text-sm font-black uppercase tracking-tight">{step.label}</span>
-                            <span className="text-[10px] font-bold opacity-40">{step.time}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+        <DeliveryTracker />
       </section>
 
-      {/* ── Footer Restauré (Version Originale Noire) ── */}
+      {/* ── Footer ── */}
       <footer id="contact" className="bg-black text-white pt-16 pb-10 rounded-t-[3.5rem]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
