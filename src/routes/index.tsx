@@ -4,7 +4,7 @@ import {
   Package, UtensilsCrossed, Zap, FileText, ShoppingBag,
   ClipboardList, Bike, Truck, MapPin,
   Phone, Mail, MessageCircle, ArrowRight, Instagram,
-  Facebook, Menu, X, CheckCircle2, Navigation, Star
+  Facebook, Menu, X, CheckCircle2, Navigation, Send
 } from "lucide-react";
 
 // Images
@@ -22,7 +22,7 @@ const SOCIAL_LINKS = {
   facebook: "https://www.facebook.com/share/1E4YNzPwWn/?mibextid=wwXIfr",
   tiktok: "https://www.tiktok.com/@nesorka_delivery.tg?_r=1&_t=ZN-95UMqZPJZzi",
   instagram: "https://www.instagram.com/nesorkaba.tg?igsh=MWY2c2ZrMXJrbHdybw%3D%3D&utm_source=qr",
-  whatsapp: "https://wa.me/22870074420",
+  whatsapp: "https://wa.me/22896362747", // Numéro principal
   maps: "https://maps.google.com/?q=6.174995,1.316760",
 };
 
@@ -116,6 +116,15 @@ export default function Index() {
   const [heroSlide, setHeroSlide] = useState(0);
   const haptic = useHaptic();
 
+  // État du formulaire
+  const [form, setForm] = useState({
+    depart: "",
+    arrivee: "",
+    colis: "",
+    contact: "",
+    heure: ""
+  });
+
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", fn);
@@ -128,6 +137,14 @@ export default function Index() {
   }, []);
 
   const closeMenu = () => { haptic("light"); setMenuOpen(false); };
+
+  const sendOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    haptic("heavy");
+    const message = `📋 DEMANDE DE LIVRAISON – NÉSORKABA 🚚\n\n1️⃣ Lieu de départ : ${form.depart}\n2️⃣ Lieu d’arrivée : ${form.arrivee}\n3️⃣ Type de colis : ${form.colis}\n4️⃣ Contact du receveur : ${form.contact}\n5️⃣ Heure souhaitée : ${form.heure}\n\n📞 Votre demande sera traitée immédiatement.`;
+    const whatsappUrl = `https://wa.me/22896362747?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   return (
     <div className="min-h-screen bg-white text-black overflow-x-hidden">
@@ -152,15 +169,14 @@ export default function Index() {
         </div>
       </header>
 
-      {/* ── Mobile Menu Redirection ── */}
+      {/* ── Mobile Menu ── */}
       <div className={`fixed inset-0 bg-black text-white z-[90] transition-transform duration-500 flex flex-col ${menuOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="p-6 flex justify-end"><button onClick={closeMenu}><X size={32} /></button></div>
         <nav className="flex flex-col items-center gap-8 pt-10 text-3xl font-display font-black">
           <a href="#services" onClick={closeMenu}>Services</a>
-          <a href="#fonctionnement" onClick={closeMenu}>Comment ça marche</a>
+          <a href="#commande" onClick={closeMenu}>Commander</a>
           <a href="#localisation" onClick={closeMenu}>Localisation</a>
           <a href="#contact" onClick={closeMenu}>Contact</a>
-          <HapticLink href={SOCIAL_LINKS.whatsapp} className="bg-[#FFCC00] text-black px-12 py-4 rounded-full mt-6 text-xl font-black">Commander</HapticLink>
         </nav>
       </div>
 
@@ -175,7 +191,7 @@ export default function Index() {
                 Commandez <br /><span className="text-white drop-shadow-md">aujourd'hui,</span> <br />recevez vite.
             </h1>
             <div className="flex gap-3 pt-2">
-              <HapticLink href={SOCIAL_LINKS.whatsapp} className="flex-1 bg-black text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2">Commander</HapticLink>
+              <a href="#commande" className="flex-1 bg-black text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2">Commander</a>
               <HapticLink href="tel:+22870074420" className="flex-1 bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 border-b-4 border-black/10">Appeler</HapticLink>
             </div>
           </div>
@@ -193,39 +209,88 @@ export default function Index() {
         <div className="grid gap-5">
           {services.map((s, i) => (
             <div key={i} className="bg-white/5 border border-white/10 p-5 rounded-[2rem] flex items-center gap-4">
-              <div className="w-14 h-14 bg-[#FFCC00] rounded-2xl flex items-center justify-center shrink-0"><s.icon className="text-black" /></div>
+              <div className="w-14 h-14 bg-[#FFCC00] rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-yellow-500/20"><s.icon className="text-black" /></div>
               <div><h3 className="font-black text-[#FFCC00]">{s.title}</h3><p className="text-sm opacity-50">{s.desc}</p></div>
             </div>
           ))}
         </div>
       </section>
 
+      {/* ── Formulaire de Commande (NOUVEAUTÉ) ── */}
+      <section id="commande" className="py-20 px-5 bg-white">
+        <div className="max-w-md mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-display font-black tracking-tight text-black">Prise en <span className="text-[#FFCC00] bg-black px-2">charge</span> immédiate</h2>
+            <p className="text-xs font-bold text-gray-400 mt-2 uppercase tracking-widest">Remplissez et validez sur WhatsApp</p>
+          </div>
+
+          <form onSubmit={sendOrder} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase ml-4 text-gray-500">1️⃣ Lieu de départ</label>
+              <input required type="text" placeholder="Ex: Baguida, Rue de la Paix" 
+                className="w-full bg-gray-100 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#FFCC00] transition"
+                value={form.depart} onChange={e => setForm({...form, depart: e.target.value})} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase ml-4 text-gray-500">2️⃣ Lieu d'arrivée</label>
+              <input required type="text" placeholder="Ex: Hédzranawoé, Marché" 
+                className="w-full bg-gray-100 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#FFCC00] transition"
+                value={form.arrivee} onChange={e => setForm({...form, arrivee: e.target.value})} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase ml-4 text-gray-500">3️⃣ Type de colis</label>
+              <input required type="text" placeholder="Ex: Repas chaud, Documents, etc." 
+                className="w-full bg-gray-100 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#FFCC00] transition"
+                value={form.colis} onChange={e => setForm({...form, colis: e.target.value})} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase ml-4 text-gray-500">4️⃣ Contact du receveur</label>
+              <input required type="tel" placeholder="Ex: +228 90 00 00 00" 
+                className="w-full bg-gray-100 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#FFCC00] transition"
+                value={form.contact} onChange={e => setForm({...form, contact: e.target.value})} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase ml-4 text-gray-500">5️⃣ Heure souhaitée</label>
+              <input required type="text" placeholder="Ex: Maintenant ou 14h30" 
+                className="w-full bg-gray-100 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#FFCC00] transition"
+                value={form.heure} onChange={e => setForm({...form, heure: e.target.value})} />
+            </div>
+
+            <button type="submit" className="w-full bg-[#FFCC00] text-black font-black py-5 rounded-[2rem] shadow-xl shadow-yellow-500/30 flex items-center justify-center gap-3 active:scale-95 transition mt-4">
+              Envoyer la demande <Send size={20} />
+            </button>
+            <p className="text-[9px] text-center font-bold text-gray-400 mt-2 px-6">📞 Votre demande sera traitée immédiatement par nos équipes après envoi.</p>
+          </form>
+        </div>
+      </section>
+
       {/* ── Tracker ── */}
-      <section id="fonctionnement" className="py-20 px-5 bg-white text-center">
+      <section id="fonctionnement" className="py-20 px-5 bg-gray-50 text-center">
         <h2 className="text-3xl font-display font-black mb-10">Suivi en Direct</h2>
         <DeliveryTracker />
       </section>
 
-      {/* ── Localisation (REMISE) ── */}
-      <section id="localisation" className="py-20 px-5 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-display font-black tracking-tight">Notre Localisation</h2>
-            <div className="w-12 h-1 bg-[#FFCC00] mx-auto mt-2" />
+      {/* ── Localisation ── */}
+      <section id="localisation" className="py-20 px-5 bg-white">
+        <div className="max-w-7xl mx-auto text-center mb-10">
+          <h2 className="text-3xl font-display font-black tracking-tight">Notre Localisation</h2>
+        </div>
+        <div className="rounded-[2.5rem] overflow-hidden border-[6px] border-black shadow-2xl mb-6">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.5!2d1.316760!3d6.174995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTAnMjkuOSJOIDHCsDE5JzAwLjMiRQ!5e0!3m2!1sfr!2stg!4v1"
+            width="100%" height="350" style={{ border: 0 }} allowFullScreen loading="lazy" title="Maps"
+          />
+        </div>
+        <div className="bg-black text-white p-6 rounded-[2rem] flex items-center justify-between border-b-4 border-[#FFCC00]">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#FFCC00] rounded-full flex items-center justify-center"><MapPin className="text-black" /></div>
+            <div className="text-left"><p className="font-black">PAPY SPOT</p><p className="text-xs opacity-50">Baguida, Lomé — Togo</p></div>
           </div>
-          <div className="rounded-[2.5rem] overflow-hidden border-[6px] border-black shadow-2xl mb-6">
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.5!2d1.316760!3d6.174995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTAnMjkuOSJOIDHCsDE5JzAwLjMiRQ!5e0!3m2!1sfr!2stg!4v1"
-              width="100%" height="350" style={{ border: 0 }} allowFullScreen loading="lazy" title="Maps"
-            />
-          </div>
-          <div className="bg-black text-white p-6 rounded-[2rem] flex items-center justify-between border-b-4 border-[#FFCC00]">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#FFCC00] rounded-full flex items-center justify-center"><MapPin className="text-black" /></div>
-              <div><p className="font-black">PAPY SPOT</p><p className="text-xs opacity-50">Baguida, Lomé — Togo</p></div>
-            </div>
-            <HapticLink href={SOCIAL_LINKS.maps} target="_blank" className="bg-white text-black px-5 py-2 rounded-full font-black text-xs">Maps</HapticLink>
-          </div>
+          <HapticLink href={SOCIAL_LINKS.maps} target="_blank" className="bg-white text-black px-5 py-2 rounded-full font-black text-xs">Maps</HapticLink>
         </div>
       </section>
 
@@ -244,8 +309,8 @@ export default function Index() {
             <div className="space-y-6">
               <h4 className="text-[#FFCC00] font-black uppercase text-[10px] tracking-widest">Contact</h4>
               <ul className="space-y-4 text-xs font-bold">
-                <li>+228 70 07 44 20</li>
-                <li>WhatsApp 24/7</li>
+                <li><a href="tel:+22896362747">+228 96 36 27 47</a></li>
+                <li><a href="tel:+22870074420">+228 70 07 44 20</a></li>
                 <li>Baguida, Lomé</li>
               </ul>
             </div>
@@ -257,7 +322,6 @@ export default function Index() {
             </div>
           </div>
           <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10">
-            <h4 className="text-[#FFCC00] font-black text-[10px] mb-4 uppercase">Disponibilité</h4>
             <p className="text-2xl font-black text-[#FFCC00] mb-5">24h/24 — 7j/7</p>
             <HapticLink href={SOCIAL_LINKS.whatsapp} className="bg-[#FFCC00] text-black px-6 py-3 rounded-xl font-black flex items-center justify-center gap-2 w-full">Chatter maintenant</HapticLink>
           </div>
